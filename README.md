@@ -1,4 +1,4 @@
-# Whistle — Inventory Barcode Management System
+# Inventory Barcode Management System
 
 A warehouse inventory app built entirely in **Python (Flask)**: generate a
 scannable barcode for every SKU, scan it with a phone or webcam to record
@@ -31,29 +31,6 @@ stock in/out, and watch inventory value and low-stock alerts update live.
 | Database   | SQLite (swap the URI for Postgres/MySQL in production) |
 | Barcodes   | `python-barcode` (generation) + `html5-qrcode` CDN (browser-side scanning) |
 | Frontend   | Server-rendered Jinja templates, vanilla JS, no build step |
-
-## Project structure
-
-```
-inventory-barcode-system/
-├── app.py                  # Flask app factory + all routes
-├── config.py                # App configuration
-├── models.py                  # Supplier, Product, Transaction models
-├── barcode_utils.py             # Barcode PNG generation
-├── requirements.txt
-├── static/
-│   ├── css/style.css          # Design system
-│   └── barcodes/                # Generated barcode PNGs (gitignored)
-└── templates/
-    ├── base.html
-    ├── dashboard.html            # Stats + stock heatmap
-    ├── products.html               # Searchable product list
-    ├── product_new.html              # Add-product form
-    ├── product_detail.html             # Barcode + stock adjustment
-    ├── scan.html                        # Camera scanner
-    ├── history.html                       # Transaction log
-    └── suppliers.html                       # Supplier directory
-```
 
 ## Getting started
 
