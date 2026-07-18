@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Transaction history</h1>
+    <p>Most recent 200 stock movements.</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{{ url_for('history') }}" class="btn {{ 'btn-primary' if not type_filter else 'btn-ghost' }} btn-sm">All</a>
+    <a href="{{ url_for('history', type='IN') }}" class="btn {{ 'btn-primary' if type_filter == 'IN' else 'btn-ghost' }} btn-sm">Stock in</a>
+    <a href="{{ url_for('history', type='OUT') }}" class="btn {{ 'btn-primary' if type_filter == 'OUT' else 'btn-ghost' }} btn-sm">Stock out</a>
+  </div>
+</div>
+
+<div class="card">
+  {% if transactions %}
+  <table>
+    <thead><tr><th>Product</th><th>SKU</th><th>Type</th><th>Qty</th><th>Note</th><th>When</th></tr></thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td><a href="{{ url_for('product_detail', product_id=t.product_id) }}">{{ t.product.name }}</a></td>
+        <td class="mono">{{ t.product.sku }}</td>
+        <td>
+          {% if t.type == 'IN' %}<span class="badge badge-success">Stock in</span>
+          {% else %}<span class="badge badge-danger">Stock out</span>{% endif %}
+        </td>
+        <td>{{ t.quantity }}</td>
+        <td>{{ t.note or "—" }}</td>
+        <td>{{ t.performed_at.strftime("%b %d, %Y %H:%M") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No transactions match this filter.</div>
+  {% endif %}
+</div>
+{% endblock %}

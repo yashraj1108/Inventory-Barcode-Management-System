@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Whistle{% endblock %} · {{ company_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="topnav">
+    <div class="logo">
+      <span class="logo-mark"><span></span><span></span><span></span><span></span></span>
+      <span class="brand-word">Whistle</span>
+    </div>
+    <nav class="nav-links">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('products') }}" class="{{ 'active' if request.endpoint in ('products','product_new','product_detail') }}">Products</a>
+      <a href="{{ url_for('scan') }}" class="{{ 'active' if request.endpoint == 'scan' }}">Scan</a>
+      <a href="{{ url_for('history') }}" class="{{ 'active' if request.endpoint == 'history' }}">History</a>
+      <a href="{{ url_for('suppliers') }}" class="{{ 'active' if request.endpoint == 'suppliers' }}">Suppliers</a>
+    </nav>
+  </div>
+
+  <div class="shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

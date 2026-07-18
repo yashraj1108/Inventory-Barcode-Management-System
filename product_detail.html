@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ product.name }}</h1>
+    <p class="mono">{{ product.sku }} · {{ product.category }}</p>
+  </div>
+  {% if product.is_out_of_stock %}
+    <span class="badge badge-danger">Out of stock</span>
+  {% elif product.is_low_stock %}
+    <span class="badge badge-alert">Low stock</span>
+  {% else %}
+    <span class="badge badge-success">In stock</span>
+  {% endif %}
+</div>
+
+<div class="detail-grid">
+  <div>
+    <div class="card detail-main">
+      <h2>Details</h2>
+      <div class="detail-row"><span class="k">On hand</span><span class="v">{{ product.quantity }} units</span></div>
+      <div class="detail-row"><span class="k">Unit price</span><span class="v">${{ "%.2f"|format(product.unit_price) }}</span></div>
+      <div class="detail-row"><span class="k">Total value</span><span class="v">${{ "{:,.2f}".format(product.total_value) }}</span></div>
+      <div class="detail-row"><span class="k">Reorder threshold</span><span class="v">{{ product.reorder_threshold }} units</span></div>
+      <div class="detail-row"><span class="k">Location</span><span class="v mono">{{ product.location }}</span></div>
+      <div class="detail-row"><span class="k">Supplier</span><span class="v">{{ product.supplier.name if product.supplier else "—" }}</span></div>
+      <div class="detail-row"><span class="k">Added</span><span class="v">{{ product.created_at.strftime("%b %d, %Y") }}</span></div>
+    </div>
+
+    <h3 class="section-title">Transaction history</h3>
+    <div class="card">
+      {% if product.transactions %}
+      <table>
+        <thead><tr><th>Type</th><th>Qty</th><th>Note</th><th>When</th></tr></thead>
+        <tbody>
+          {% for t in product.transactions %}
+          <tr>
+            <td>
+              {% if t.type == 'IN' %}<span class="badge badge-success">Stock in</span>
+              {% else %}<span class="badge badge-danger">Stock out</span>{% endif %}
+            </td>
+            <td>{{ t.quantity }}</td>
+            <td>{{ t.note or "—" }}</td>
+            <td>{{ t.performed_at.strftime("%b %d, %H:%M") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">No stock movements yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="card barcode-card">
+      <img src="{{ url_for('static', filename='barcodes/' + barcode_filename) }}" alt="Barcode for {{ product.sku }}">
+    </div>
+
+    <div class="card adjust-form">
+      <h3 style="margin-top:0; font-size: 1rem;">Adjust stock</h3>
+      <form action="{{ url_for('product_adjust', product_id=product.id) }}" method="POST">
+        <div class="type-toggle">
+          <input type="radio" id="type-in" name="type" value="IN" checked>
+          <label for="type-in" class="in-label">Stock in</label>
+          <input type="radio" id="type-out" name="type" value="OUT">
+          <label for="type-out" class="out-label">Stock out</label>
+        </div>
+        <div class="field">
+          <label for="adjust-qty">Quantity</label>
+          <input type="number" id="adjust-qty" name="quantity" min="1" value="1" required>
+        </div>
+        <div class="field">
+          <label for="adjust-note">Note (optional)</label>
+          <input type="text" id="adjust-note" name="note" placeholder="e.g. weekly restock">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Record movement</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

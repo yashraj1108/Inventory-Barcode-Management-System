@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Scan{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Scan a barcode</h1>
+    <p>Point the camera at a product's barcode, or type the SKU manually.</p>
+  </div>
+</div>
+
+<div class="scan-grid">
+  <div>
+    <div id="reader"></div>
+    <div class="manual-entry">
+      <input type="text" id="manual-code" placeholder="Enter SKU…">
+      <button class="btn btn-ghost" id="manual-submit">Look up</button>
+    </div>
+  </div>
+
+  <div class="card scan-result" id="result-card">
+    <div class="empty-state" id="result-empty">Waiting for a scan…</div>
+
+    <div id="result-body" style="display:none;">
+      <div style="display:flex; justify-content: space-between; align-items:center;">
+        <span class="badge" id="result-badge"></span>
+        <span class="mono" id="result-sku" style="font-size:0.78rem; color: var(--text-muted);"></span>
+      </div>
+      <h3 id="result-name" style="margin: 12px 0 4px;"></h3>
+      <p id="result-meta" style="color: var(--text-muted); margin: 0 0 18px; font-size: 0.88rem;"></p>
+
+      <form id="action-form" class="adjust-form" style="padding:0; box-shadow:none; border:none;">
+        <div class="type-toggle">
+          <input type="radio" id="scan-type-in" name="scan-type" value="IN" checked>
+          <label for="scan-type-in" class="in-label">Stock in</label>
+          <input type="radio" id="scan-type-out" name="scan-type" value="OUT">
+          <label for="scan-type-out" class="out-label">Stock out</label>
+        </div>
+        <div class="field">
+          <label for="scan-qty">Quantity</label>
+          <input type="number" id="scan-qty" min="1" value="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Record movement</button>
+      </form>
+      <p id="action-message" style="margin-top: 12px; font-weight: 600; font-size: 0.88rem;"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+  const resultEmpty = document.getElementById('result-empty');
+  const resultBody = document.getElementById('result-body');
+  const resultBadge = document.getElementById('result-badge');
+  const resultSku = document.getElementById('result-sku');
+  const resultName = document.getElementById('result-name');
+  const resultMeta = document.getElementById('result-meta');
+  const actionMessage = document.getElementById('action-message');
+
+  let currentSku = null;
+  let lastScanned = null;
+  let lastScanAt = 0;
+
+  function renderProduct(product) {
+    resultEmpty.style.display = 'none';
+    resultBody.style.display = 'block';
+    actionMessage.textContent = '';
+
+    currentSku = product.sku;
+    resultSku.textContent = product.sku;
+    resultName.textContent = product.name;
+    resultMeta.textContent = `${product.category} · ${product.location} · ${product.quantity} units on hand`;
+
+    if (product.is_out_of_stock) {
+      resultBadge.className = 'badge badge-danger';
+      resultBadge.textContent = 'Out of stock';
+    } else if (product.is_low_stock) {
+      resultBadge.className = 'badge badge-alert';
+      resultBadge.textContent = 'Low stock';
+    } else {
+      resultBadge.className = 'badge badge-success';
+      resultBadge.textContent = 'In stock';
+    }
+  }
+
+  function renderNotFound(code) {
+    resultEmpty.style.display = 'none';
+    resultBody.style.display = 'block';
+    currentSku = null;
+    resultBadge.className = 'badge badge-danger';
+    resultBadge.textContent = 'Not found';
+    resultSku.textContent = code;
+    resultName.textContent = 'No matching product';
+    resultMeta.textContent = 'This SKU is not in the system yet.';
+    actionMessage.textContent = '';
+  }
+
+  async function lookup(code) {
+    try {
+      const res = await fetch("{{ url_for('api_lookup') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: code }),
+      });
+      const data = await res.json();
+      if (data.status === 'found') {
+        renderProduct(data.product);
+      } else {
+        renderNotFound(code);
+      }
+    } catch (err) {
+      renderNotFound(code);
+    }
+  }
+
+  function handleScan(code) {
+    const now = Date.now();
+    if (code === lastScanned && now - lastScanAt < 2500) return;
+    lastScanned = code;
+    lastScanAt = now;
+    lookup(code);
+  }
+
+  document.getElementById('action-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentSku) return;
+
+    const type = document.querySelector('input[name="scan-type"]:checked').value;
+    const quantity = parseInt(document.getElementById('scan-qty').value, 10);
+
+    try {
+      const res = await fetch("{{ url_for('api_transaction') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: currentSku, type, quantity }),
+      });
+      const data = await res.json();
+      actionMessage.style.color = data.status === 'success' ? 'var(--success)' : 'var(--danger)';
+      actionMessage.textContent = data.message;
+      if (data.product) renderProduct(data.product);
+    } catch (err) {
+      actionMessage.style.color = 'var(--danger)';
+      actionMessage.textContent = 'Network error — try again.';
+    }
+  });
+
+  // Camera scanner, configured for common 1D barcode formats plus QR
+  const formatsToSupport = [
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.QR_CODE,
+  ];
+  const qrScanner = new Html5Qrcode("reader", { formatsToSupport });
+
+  Html5Qrcode.getCameras().then(cameras => {
+    if (cameras && cameras.length) {
+      qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 280, height: 140 } },
+        (decodedText) => handleScan(decodedText.toUpperCase()),
+        () => {} // ignore per-frame scan failures
+      );
+    } else {
+      document.getElementById('reader').innerHTML =
+        '<div class="empty-state">No camera found — use manual entry.</div>';
+    }
+  }).catch(() => {
+    document.getElementById('reader').innerHTML =
+      '<div class="empty-state">Camera access denied — use manual entry.</div>';
+  });
+
+  // Manual fallback
+  document.getElementById('manual-submit').addEventListener('click', () => {
+    const val = document.getElementById('manual-code').value.trim().toUpperCase();
+    if (val) handleScan(val);
+  });
+  document.getElementById('manual-code').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('manual-submit').click();
+  });
+</script>
+{% endblock %}

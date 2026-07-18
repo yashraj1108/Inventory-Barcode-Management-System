@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Products</h1>
+    <p>{{ products|length }} SKU{{ 's' if products|length != 1 }} tracked</p>
+  </div>
+  <a href="{{ url_for('product_new') }}" class="btn btn-primary">+ Add product</a>
+</div>
+
+<div class="toolbar">
+  <form class="search-box" method="get">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name, SKU, or category…">
+  </form>
+</div>
+
+<div class="card">
+  {% if products %}
+  <table>
+    <thead>
+      <tr><th>Product</th><th>SKU</th><th>Category</th><th>On hand</th><th>Unit price</th><th>Location</th><th>Supplier</th></tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr class="{{ 'low-row' if p.is_low_stock }}">
+        <td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.name }}</a></td>
+        <td class="mono">{{ p.sku }}</td>
+        <td><span class="badge badge-neutral">{{ p.category }}</span></td>
+        <td>
+          {% if p.is_out_of_stock %}
+            <span class="badge badge-danger">{{ p.quantity }}</span>
+          {% elif p.is_low_stock %}
+            <span class="badge badge-alert">{{ p.quantity }}</span>
+          {% else %}
+            {{ p.quantity }}
+          {% endif %}
+        </td>
+        <td>${{ "%.2f"|format(p.unit_price) }}</td>
+        <td class="mono">{{ p.location }}</td>
+        <td>{{ p.supplier.name if p.supplier else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    {% if q %}No products match "{{ q }}".{% else %}No products yet — add your first one to generate its barcode.{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

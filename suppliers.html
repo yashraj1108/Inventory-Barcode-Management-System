@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Suppliers</h1>
+    <p>{{ suppliers|length }} on file</p>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div class="card">
+    {% if suppliers %}
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Products supplied</th></tr></thead>
+      <tbody>
+        {% for s in suppliers %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td>{{ s.contact_email or "—" }}</td>
+          <td>{{ s.phone or "—" }}</td>
+          <td>{{ s.products|length }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No suppliers yet — add one alongside your products.</div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding: 24px;">
+    <h3 style="margin-top:0; font-size: 1rem;">Add a supplier</h3>
+    <form action="{{ url_for('suppliers') }}" method="POST">
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" placeholder="InduSupply Inc." required>
+      </div>
+      <div class="field">
+        <label for="contact_email">Contact email</label>
+        <input type="email" id="contact_email" name="contact_email" placeholder="orders@indusupply.com">
+      </div>
+      <div class="field">
+        <label for="phone">Phone</label>
+        <input type="text" id="phone" name="phone" placeholder="+1 555 0100">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Add supplier</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

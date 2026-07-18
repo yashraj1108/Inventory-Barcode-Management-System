@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Warehouse overview</h1>
+    <p>{{ company_name }} · live inventory snapshot</p>
+  </div>
+  <a href="{{ url_for('product_new') }}" class="btn btn-primary">+ Add product</a>
+</div>
+
+<div class="stat-grid">
+  <div class="card stat-card">
+    <div class="label">Total SKUs</div>
+    <div class="value">{{ total_skus }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="label">Inventory value</div>
+    <div class="value">${{ "{:,.2f}".format(total_value) }}</div>
+  </div>
+  <div class="card stat-card {{ 'warn' if low_stock }}">
+    <div class="label">Low stock alerts</div>
+    <div class="value">{{ low_stock|length }}</div>
+  </div>
+</div>
+
+<div class="heatmap-section">
+  <h3 class="section-title">Stock heatmap by location</h3>
+  <p class="section-sub">Color reflects the lowest stock-to-threshold ratio at each shelf location.</p>
+
+  {% if location_cells %}
+  <div class="heatmap-grid">
+    {% for cell in location_cells %}
+    <div class="heatmap-cell {{ 'heat-critical' if cell.ratio <= 0.5 else ('heat-watch' if cell.ratio <= 1 else 'heat-healthy') }}">
+      <span class="loc">{{ cell.location }}</span>
+      <span class="count">{{ cell.items|length }} SKU{{ 's' if cell.items|length != 1 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="heatmap-legend">
+    <span><span class="legend-dot" style="background:#16A34A"></span> Healthy</span>
+    <span><span class="legend-dot" style="background:#D97706"></span> Near threshold</span>
+    <span><span class="legend-dot" style="background:#DC2626"></span> Critical / out of stock</span>
+  </div>
+  {% else %}
+  <div class="card empty-state">No products yet — add one to populate the heatmap.</div>
+  {% endif %}
+</div>
+
+<h3 class="section-title">Low stock alerts</h3>
+<div class="card">
+  {% if low_stock %}
+  <table>
+    <thead><tr><th>Product</th><th>SKU</th><th>Location</th><th>On hand</th><th>Threshold</th></tr></thead>
+    <tbody>
+      {% for p in low_stock %}
+      <tr>
+        <td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.name }}</a></td>
+        <td class="mono">{{ p.sku }}</td>
+        <td>{{ p.location }}</td>
+        <td>
+          {% if p.is_out_of_stock %}
+            <span class="badge badge-danger">{{ p.quantity }} units</span>
+          {% else %}
+            <span class="badge badge-alert">{{ p.quantity }} units</span>
+          {% endif %}
+        </td>
+        <td>{{ p.reorder_threshold }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">Everything is above its reorder threshold. Nice.</div>
+  {% endif %}
+</div>
+
+<h3 class="section-title">Recent activity</h3>
+<div class="card">
+  {% if recent_transactions %}
+  <table>
+    <thead><tr><th>Product</th><th>Type</th><th>Qty</th><th>When</th></tr></thead>
+    <tbody>
+      {% for t in recent_transactions %}
+      <tr>
+        <td>{{ t.product.name }}</td>
+        <td>
+          {% if t.type == 'IN' %}
+            <span class="badge badge-success">Stock in</span>
+          {% else %}
+            <span class="badge badge-danger">Stock out</span>
+          {% endif %}
+        </td>
+        <td>{{ t.quantity }}</td>
+        <td>{{ t.performed_at.strftime("%b %d, %H:%M") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No stock movements recorded yet.</div>
+  {% endif %}
+</div>
+{% endblock %}
